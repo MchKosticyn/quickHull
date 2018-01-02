@@ -124,6 +124,54 @@ void addPointsToFaces(tFace* faces, unsigned long faces_count, vertices listVert
             }
 }
 
+tFaces quickHull(const vertices& listVertices) {
+    stack<tFace> Stack;
+    vertices simplex = createSimplex(listVertices);
+    tFaces faces = {{{simplex[0], simplex[1], simplex[2]}}, {{simplex[0], simplex[3], simplex[1]}}, {{simplex[1], simplex[3], simplex[2]}}, {{simplex[0], simplex[2], simplex[3]}}};
+    addPointsToFaces(faces.data(), faces.size(), listVertices);
+    for (auto face : faces)
+        if (!face.points.empty()) Stack.push(face);
+
+    while (!Stack.empty()) {
+        tFace face = Stack.top();
+        Stack.pop();
+        if (!face.points.empty()) {
+            double maxDist = -1;
+            coordinates furthest = {0, 0, 0};
+            for (auto point : face.points) {
+                double dist = pointFaceDist(face.plane, point);
+                if (dist > maxDist) {
+                    maxDist = dist;
+                    furthest = point;
+                }
+            }
+
+            vertices listUnclaimedVertices;
+            tFaces newFaces;
+            auto endIter = faces.end();
+            for (auto iter = faces.begin(); iter != endIter; ++iter) {
+                if (faceIsVisible(furthest, *iter)) {
+                    for (auto point : (*iter).points)
+                        listUnclaimedVertices.push_back(point);
+                    tFaces tmpFaces = {{{(*iter).plane[0], (*iter).plane[1], furthest}}, {{(*iter).plane[0], furthest, (*iter).plane[2]}}, {{(*iter).plane[2], furthest, (*iter).plane[1]}}};
+                    for (auto &tmpFace : tmpFaces) {
+                        if (find(newFaces.begin(), newFaces.end(), tmpFace) == newFaces.end())
+                            newFaces.push_back(tmpFace);
+                    }
+                    faces.erase(iter);
+                }
+            }
+            addPointsToFaces(newFaces.data(), newFaces.size(), listUnclaimedVertices);
+            for (auto& newFace : newFaces) {
+                faces.push_back(newFace);
+                Stack.push(newFace);
+            }
+        }
+    }
+    return faces;
+};
+
+
 int main() {
     return 0;
 }
