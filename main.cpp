@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <array>
+#include "stack"
 
 using namespace std;
 
@@ -55,6 +56,56 @@ double pointPlaneDist(coordinates planeP1, coordinates planeP2, coordinates plan
     coordinates baseV2 = createVect(planeP1, planeP3);
     return tripleProd(baseV1, baseV2, createVect(planeP1, point)) / vectMod(vectProd(baseV1, baseV2));
 }
+
+vertices createSimplex(const vertices listVertices) {
+    coordinates first = listVertices.front();
+    coordinates EP[6] = {first, first, first, first, first, first};
+
+    for(auto vertex : listVertices) {
+        if( vertex[0] <= EP[0][0] ) { EP[0] = vertex; }
+        if( vertex[0] >= EP[1][0] ) { EP[1] = vertex; }
+        if( vertex[1] <= EP[2][1] ) { EP[2] = vertex; }
+        if( vertex[1] >= EP[3][1] ) { EP[3] = vertex; }
+        if( vertex[2] <= EP[4][2] ) { EP[4] = vertex; }
+        if( vertex[2] >= EP[5][2] ) { EP[5] = vertex; }
+    }
+
+    double maxDist = 0;
+    coordinates triangleP1 = EP[0], triangleP2 = EP[0], triangleP3 = EP[0];
+    for (auto point1 : EP)
+        for (auto point2 : EP) {
+            double dist = pointDist(point1, point2);
+            if (dist > maxDist) {
+                maxDist = dist;
+                triangleP1 = point1;
+                triangleP2 = point2;
+            }
+        }
+
+    maxDist = 0;
+    for (auto point : EP) {
+        double dist = pointLineDist(triangleP1, triangleP2, point);
+        if (dist > maxDist) {
+            maxDist = dist;
+            triangleP3 = point;
+        }
+    }
+
+    maxDist = 0;
+    coordinates apex = EP[0];
+    for (auto point : listVertices) {
+        double dist = pointPlaneDist(triangleP1, triangleP2, triangleP3, point);
+        if (dist > maxDist) {
+            maxDist = dist;
+            apex = point;
+        }
+    }
+    vertices Res;
+    if (pointPlaneDist(triangleP1, triangleP2, triangleP3, apex) > 0)
+         Res = { triangleP1, triangleP3, triangleP2, apex };
+    else Res = { triangleP1, triangleP2, triangleP3, apex };
+    return Res;
+};
 
 int main() {
     return 0;
