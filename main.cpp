@@ -115,6 +115,15 @@ bool faceIsVisible(coordinates eyePoint, tFace face) {
     return pointFaceDist(face.plane, eyePoint) > 0;
 }
 
+void addPointsToFaces(tFace* faces, unsigned long faces_count, vertices listVertices) {
+    for (auto vertex : listVertices)
+        for (int i = 0; i < faces_count; i++)
+            if (faceIsVisible(vertex, faces[i])) {
+                faces[i].points.push_back(vertex);
+                break;
+            }
+}
+
 int main() {
     return 0;
 }
