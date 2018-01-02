@@ -1,0 +1,16 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/michael/CLionProjects/quickHull/main.cpp
+algorithm
+-
+array
+-
+stack
+/home/michael/CLionProjects/quickHull/stack
+
