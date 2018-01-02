@@ -107,6 +107,14 @@ vertices createSimplex(const vertices listVertices) {
     return Res;
 };
 
+double pointFaceDist(triangle face, coordinates point) {
+    return pointPlaneDist(face[0], face[1], face[2], point);
+}
+
+bool faceIsVisible(coordinates eyePoint, tFace face) {
+    return pointFaceDist(face.plane, eyePoint) > 0;
+}
+
 int main() {
     return 0;
 }
