@@ -1,6 +1,6 @@
 #include <algorithm>
 #include <array>
-#include "stack"
+#include "queue"
 
 using namespace std;
 
@@ -17,10 +17,15 @@ typedef struct {
 
 bool operator ==(tFace a, tFace b)
 {
-    return (a.plane[0] == b.plane[0]) && (a.plane[1] == b.plane[1]) && (a.plane[2] == b.plane[2]);
+    auto findX = find(b.plane.begin(), b.plane.end(), a.plane[0]);
+    auto findY = find(b.plane.begin(), b.plane.end(), a.plane[1]);
+    auto findZ = find(b.plane.begin(), b.plane.end(), a.plane[2]);
+    return (findX != b.plane.end()) && (findY != b.plane.end()) && (findZ != b.plane.end());
 }
 
 typedef vector<tFace> tFaces;
+
+double eps = 0.0000001;
 
 coordinates createVect(coordinates p1, coordinates p2) {
     return { p2[0] - p1[0], p2[1] - p1[1], p2[2] - p1[2] };
@@ -57,17 +62,17 @@ double pointPlaneDist(coordinates planeP1, coordinates planeP2, coordinates plan
     return tripleProd(baseV1, baseV2, createVect(planeP1, point)) / vectMod(vectProd(baseV1, baseV2));
 }
 
-vertices createSimplex(const vertices listVertices) {
+vertices createSimplex(const vertices& listVertices) {
     coordinates first = listVertices.front();
     coordinates EP[6] = {first, first, first, first, first, first};
 
-    for(auto vertex : listVertices) {
-        if( vertex[0] <= EP[0][0] ) { EP[0] = vertex; }
-        if( vertex[0] >= EP[1][0] ) { EP[1] = vertex; }
-        if( vertex[1] <= EP[2][1] ) { EP[2] = vertex; }
-        if( vertex[1] >= EP[3][1] ) { EP[3] = vertex; }
-        if( vertex[2] <= EP[4][2] ) { EP[4] = vertex; }
-        if( vertex[2] >= EP[5][2] ) { EP[5] = vertex; }
+    for (auto vertex : listVertices) {
+        if (vertex[0] <= EP[0][0]) EP[0] = vertex;
+        if (vertex[0] >= EP[1][0]) EP[1] = vertex;
+        if (vertex[1] <= EP[2][1]) EP[2] = vertex;
+        if (vertex[1] >= EP[3][1]) EP[3] = vertex;
+        if (vertex[2] <= EP[4][2]) EP[4] = vertex;
+        if (vertex[2] >= EP[5][2]) EP[5] = vertex;
     }
 
     double maxDist = 0;
@@ -112,7 +117,7 @@ double pointFaceDist(triangle face, coordinates point) {
 }
 
 bool faceIsVisible(coordinates eyePoint, tFace face) {
-    return pointFaceDist(face.plane, eyePoint) > 0;
+    return pointFaceDist(face.plane, eyePoint) > eps;
 }
 
 void addPointsToFaces(tFace* faces, unsigned long faces_count, vertices listVertices) {
@@ -125,16 +130,19 @@ void addPointsToFaces(tFace* faces, unsigned long faces_count, vertices listVert
 }
 
 tFaces quickHull(const vertices& listVertices) {
-    stack<tFace> Stack;
+    queue<tFace> Queue;
     vertices simplex = createSimplex(listVertices);
-    tFaces faces = {{{simplex[0], simplex[1], simplex[2]}}, {{simplex[0], simplex[3], simplex[1]}}, {{simplex[1], simplex[3], simplex[2]}}, {{simplex[0], simplex[2], simplex[3]}}};
+    tFaces faces = {{{simplex[0], simplex[1], simplex[2]}},
+                    {{simplex[0], simplex[2], simplex[3]}},
+                    {{simplex[1], simplex[3], simplex[2]}},
+                    {{simplex[0], simplex[3], simplex[1]}}};
     addPointsToFaces(faces.data(), faces.size(), listVertices);
     for (auto face : faces)
-        if (!face.points.empty()) Stack.push(face);
+        if (!face.points.empty()) Queue.push(face);
 
-    while (!Stack.empty()) {
-        tFace face = Stack.top();
-        Stack.pop();
+    while (!Queue.empty()) {
+        tFace face = Queue.front();
+        Queue.pop();
         if (!face.points.empty()) {
             double maxDist = -1;
             coordinates furthest = {0, 0, 0};
@@ -148,23 +156,31 @@ tFaces quickHull(const vertices& listVertices) {
 
             vertices listUnclaimedVertices;
             tFaces newFaces;
-            auto endIter = faces.end();
-            for (auto iter = faces.begin(); iter != endIter; ++iter) {
-                if (faceIsVisible(furthest, *iter)) {
-                    for (auto point : (*iter).points)
+            tFaces needToDelete;
+            for (auto curFace : faces)
+                if (faceIsVisible(furthest, curFace)) {
+                    for (auto point : curFace.points)
                         listUnclaimedVertices.push_back(point);
-                    tFaces tmpFaces = {{{(*iter).plane[0], (*iter).plane[1], furthest}}, {{(*iter).plane[0], furthest, (*iter).plane[2]}}, {{(*iter).plane[2], furthest, (*iter).plane[1]}}};
+                    tFaces tmpFaces = {{{curFace.plane[2], furthest, curFace.plane[1]}},
+                                       {{curFace.plane[0], curFace.plane[1], furthest}},
+                                       {{curFace.plane[0], furthest, curFace.plane[2]}}};
                     for (auto &tmpFace : tmpFaces) {
-                        if (find(newFaces.begin(), newFaces.end(), tmpFace) == newFaces.end())
+                        auto alreadyExists = find(newFaces.begin(), newFaces.end(), tmpFace);
+                        if (alreadyExists != newFaces.end())
+                            newFaces.erase(alreadyExists);
+                        else
                             newFaces.push_back(tmpFace);
                     }
-                    faces.erase(iter);
+                    needToDelete.push_back(curFace);
                 }
-            }
+
+            for (auto &iter : needToDelete)
+                faces.erase(remove(faces.begin(), faces.end(), iter), faces.end());
+
             addPointsToFaces(newFaces.data(), newFaces.size(), listUnclaimedVertices);
-            for (auto& newFace : newFaces) {
+            for (auto &newFace : newFaces) {
                 faces.push_back(newFace);
-                Stack.push(newFace);
+                Queue.push(newFace);
             }
         }
     }
