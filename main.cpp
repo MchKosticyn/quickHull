@@ -122,11 +122,13 @@ bool faceIsVisible(coordinates eyePoint, tFace face) {
 
 void addPointsToFaces(tFace* faces, unsigned long faces_count, vertices listVertices) {
     for (auto vertex : listVertices)
-        for (int i = 0; i < faces_count; i++)
-            if (faceIsVisible(vertex, faces[i])) {
+        for (int i = 0; i < faces_count; i++) {
+            tFace face = faces[i];
+            if ((find(face.plane.begin(), face.plane.end(), vertex) == face.plane.end()) && faceIsVisible(vertex, face)) {
                 faces[i].points.push_back(vertex);
                 break;
             }
+        }
 }
 
 tFaces quickHull(const vertices& listVertices) {
